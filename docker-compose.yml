@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: scheduler
+      POSTGRES_PASSWORD: scheduler
+      POSTGRES_DB: scheduler
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./scripts/create-test-db.sql:/docker-entrypoint-initdb.d/create-test-db.sql:ro
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scheduler"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://scheduler:scheduler@db:5432/scheduler
+      LOG_LEVEL: info
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    profiles: ["full"]
+
+volumes:
+  pgdata:

@@ -1,0 +1,1066 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Keyloop Unified Service Scheduler API",
+    "version": "1.0.0",
+    "description": "Resource-constrained service appointment booking (technician + service bay)."
+  },
+  "components": {
+    "schemas": {}
+  },
+  "paths": {
+    "/health/live": {
+      "get": {
+        "summary": "Liveness probe",
+        "tags": [
+          "ops"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "summary": "Readiness probe (checks database)",
+        "tags": [
+          "ops"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/metrics": {
+      "get": {
+        "summary": "Prometheus metrics",
+        "tags": [
+          "ops"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/dealerships": {
+      "get": {
+        "summary": "List dealerships",
+        "tags": [
+          "catalog"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "timezone": {
+                        "type": "string"
+                      },
+                      "opensAt": {
+                        "type": "string"
+                      },
+                      "closesAt": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/service-types": {
+      "get": {
+        "summary": "List service types with duration and required technician skill",
+        "tags": [
+          "catalog"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "code": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "durationMinutes": {
+                        "type": "integer"
+                      },
+                      "requiredSkill": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dealerships/{id}/availability": {
+      "get": {
+        "summary": "Real-time availability grid for a service type on a given day",
+        "tags": [
+          "catalog"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "query",
+            "name": "serviceTypeId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "in": "query",
+            "name": "date",
+            "required": true,
+            "description": "Local date at the dealership (YYYY-MM-DD)"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "dealershipId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "serviceTypeId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "date": {
+                      "type": "string"
+                    },
+                    "slots": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "startTime": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "endTime": {
+                            "type": "string",
+                            "format": "date-time"
+                          },
+                          "available": {
+                            "type": "boolean"
+                          },
+                          "availableTechnicians": {
+                            "type": "integer"
+                          },
+                          "availableBays": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/appointments": {
+      "post": {
+        "summary": "Book a service appointment",
+        "tags": [
+          "appointments"
+        ],
+        "description": "Checks that a qualified technician and a service bay are both free for the full service duration, auto-assigns them, and persists a CONFIRMED appointment.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "dealershipId",
+                  "customerId",
+                  "vehicleId",
+                  "serviceTypeId",
+                  "startTime"
+                ],
+                "properties": {
+                  "dealershipId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "customerId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "vehicleId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "serviceTypeId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "startTime": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO-8601 with offset, aligned to 15 minutes, e.g. 2026-11-03T09:00:00Z"
+                  },
+                  "notes": {
+                    "type": "string",
+                    "maxLength": 1000
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            },
+            "in": "header",
+            "name": "idempotency-key",
+            "required": false,
+            "description": "Optional. Retrying with the same key returns the original appointment instead of double-booking."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Idempotent replay of an earlier identical request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "dealershipId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "customerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "vehicleId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "serviceTypeId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "technicianId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "serviceBayId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "startTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "CONFIRMED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "notes": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "cancelledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    }
+                  },
+                  "description": "Idempotent replay of an earlier identical request"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "dealershipId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "customerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "vehicleId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "serviceTypeId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "technicianId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "serviceBayId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "startTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "CONFIRMED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "notes": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "cancelledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "List appointments (e.g. a dealership schedule)",
+        "tags": [
+          "appointments"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "query",
+            "name": "dealershipId",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "query",
+            "name": "vehicleId",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "in": "query",
+            "name": "from",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "in": "query",
+            "name": "to",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CONFIRMED",
+                "CANCELLED"
+              ]
+            },
+            "in": "query",
+            "name": "status",
+            "required": false
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "default": 100
+            },
+            "in": "query",
+            "name": "limit",
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "dealershipId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "customerId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "vehicleId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "serviceTypeId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "technicianId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "serviceBayId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "startTime": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "endTime": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "CONFIRMED",
+                          "CANCELLED"
+                        ]
+                      },
+                      "notes": {
+                        "type": "string",
+                        "nullable": true
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "cancelledAt": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/appointments/{id}": {
+      "get": {
+        "summary": "Get an appointment",
+        "tags": [
+          "appointments"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "dealershipId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "customerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "vehicleId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "serviceTypeId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "technicianId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "serviceBayId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "startTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "CONFIRMED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "notes": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "cancelledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/appointments/{id}/cancel": {
+      "post": {
+        "summary": "Cancel an appointment, releasing its technician and bay",
+        "tags": [
+          "appointments"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "dealershipId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "customerId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "vehicleId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "serviceTypeId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "technicianId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "serviceBayId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "startTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "endTime": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "CONFIRMED",
+                        "CANCELLED"
+                      ]
+                    },
+                    "notes": {
+                      "type": "string",
+                      "nullable": true
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "cancelledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "nullable": true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "details": {
+                          "type": "object",
+                          "additionalProperties": true
+                        },
+                        "requestId": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "message"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "appointments",
+      "description": "Booking lifecycle"
+    },
+    {
+      "name": "catalog",
+      "description": "Dealerships, service types and availability"
+    },
+    {
+      "name": "ops",
+      "description": "Health and metrics"
+    }
+  ]
+}
