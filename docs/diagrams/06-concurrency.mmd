@@ -1,0 +1,27 @@
+sequenceDiagram
+    autonumber
+    participant A as Request A<br/>(Jane, 09:00 brakes)
+    participant B as Request B<br/>(Raj, 09:00 brakes)
+    participant DB as PostgreSQL
+
+    Note over A,B: Both arrive at the same instant for the same dealership.<br/>Only Alice has the BRAKES skill.
+
+    A->>DB: BEGIN · pg_advisory_xact_lock(London)
+    activate A
+    B->>DB: BEGIN · pg_advisory_xact_lock(London)
+    Note right of B: blocked: waits for A's lock
+
+    A->>DB: free technicians → [Alice] · free bays → [Bay 1, 2, 3]
+    A->>DB: INSERT (Alice, Bay 1, 09:00–11:00)
+    A->>DB: COMMIT → lock released
+    deactivate A
+    Note over A: → 201 Created<br/>(Alice, Bay 1)
+
+    activate B
+    Note right of B: lock acquired, reads fresh committed state
+    B->>DB: free technicians → [] · free bays → [Bay 2, 3]
+    B->>DB: ROLLBACK
+    deactivate B
+    Note over B: → 409 NO_AVAILABILITY
+
+    Note over A,DB: Safety net: even without the lock, the GiST EXCLUDE constraint<br/>(technician_id =, tstzrange &&) WHERE status='CONFIRMED'<br/>makes a second overlapping row for Alice impossible to commit.

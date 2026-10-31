@@ -1,0 +1,24 @@
+flowchart LR
+    customer(["👤 Customer"])
+    advisor(["👤 Service Advisor"])
+
+    subgraph keyloop["Keyloop Unified Service Scheduler"]
+        ui["Booking UI / Dealer Portal<br/><i>stubbed: OpenAPI + cURL</i>"]
+        api["Scheduler API<br/><b>Node.js · Fastify</b><br/>books technician + bay"]
+        db[("PostgreSQL 16<br/>appointments, resources")]
+    end
+
+    dms["Dealer Management System / CRM<br/><i>source of customers & vehicles</i>"]
+    obs["Monitoring<br/>Prometheus · Grafana · Log store"]
+    notify["Notification Service<br/><i>future: email / SMS</i>"]
+
+    customer -->|"choose service & time"| ui
+    advisor -->|"view schedule, cancel"| ui
+    ui -->|"REST / JSON"| api
+    api -->|"SQL (pg pool)"| db
+    dms -.->|"master data sync (assumed)"| db
+    api -.->|"/metrics, JSON logs"| obs
+    api -.->|"AppointmentConfirmed event (future)"| notify
+
+    classDef future stroke-dasharray: 5 5,fill:#f6f6f6,color:#555
+    class dms,notify future

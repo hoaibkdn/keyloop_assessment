@@ -1,0 +1,47 @@
+flowchart TB
+    req(["HTTP request"])
+
+    subgraph http["HTTP layer · src/app.ts, src/routes"]
+        direction LR
+        hooks["Hooks<br/>x-request-id · latency"]
+        schema["JSON Schema (Ajv)<br/>validation + OpenAPI"]
+        routes["Routes<br/>appointments · catalog"]
+        errh["Error handler<br/>DomainError → HTTP status"]
+        hooks --> schema --> routes
+        routes -. "errors" .-> errh
+    end
+
+    subgraph svc["Application layer · src/services"]
+        booking["BookingService<br/>transaction · advisory lock ·<br/>retry · idempotency"]
+    end
+
+    subgraph domain["Domain layer · src/domain (pure, no I/O)"]
+        direction LR
+        rules["scheduling.ts<br/>overlaps · opening hours & TZ ·<br/>slots · technician ranking"]
+        errors["errors.ts<br/>typed domain errors"]
+    end
+
+    subgraph repos["Data access · src/repositories"]
+        direction LR
+        refrepo["ReferenceRepository"]
+        resrepo["ResourceRepository"]
+        apptrepo["AppointmentRepository"]
+    end
+
+    subgraph infra["Infrastructure · src/db, src/observability"]
+        direction LR
+        pool["pg Pool +<br/>withTransaction"]
+        mig["Migration runner"]
+        metrics["Prometheus registry<br/>→ /metrics"]
+    end
+
+    pgdb[("PostgreSQL")]
+
+    req --> hooks
+    routes --> booking
+    booking --> domain
+    booking --> repos
+    repos --> pool
+    pool --> pgdb
+    mig --> pgdb
+    booking -. "counters" .-> metrics

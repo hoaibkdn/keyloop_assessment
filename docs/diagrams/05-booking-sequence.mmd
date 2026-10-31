@@ -1,0 +1,53 @@
+sequenceDiagram
+    autonumber
+    actor C as Client
+    participant R as Route + Ajv
+    participant S as BookingService
+    participant D as Domain rules
+    participant DB as PostgreSQL
+
+    C->>R: POST /appointments<br/>{dealershipId, customerId, vehicleId,<br/>serviceTypeId, startTime} + Idempotency-Key?
+    R->>R: validate schema (UUIDs, date-time, no extra fields)
+    alt invalid body
+        R-->>C: 400 BAD_REQUEST
+    end
+    R->>S: book(request, key)
+    S->>D: parseStartTime (offset required)
+
+    opt Idempotency-Key present
+        S->>DB: SELECT … WHERE idempotency_key = key
+        alt key already used
+            S-->>C: 200 original appointment<br/>(409 if body differs)
+        end
+    end
+
+    par load reference data
+        S->>DB: dealership
+    and
+        S->>DB: service type
+    end
+    S->>DB: vehicle, customer
+    alt any not found
+        S-->>C: 404 NOT_FOUND
+    end
+    S->>D: window = start + duration<br/>assertBookableWindow(future, ≤90d, 15-min, opening hours in local TZ)
+    alt rule broken / vehicle not owned
+        S-->>C: 422 VALIDATION_FAILED
+    end
+
+    S->>DB: BEGIN
+    S->>DB: pg_advisory_xact_lock(hash(dealershipId))
+    S->>DB: free qualified technicians in [start,end) + booked minutes today
+    S->>DB: free bays in [start,end)
+    alt no technician or no bay free
+        S->>DB: ROLLBACK
+        S-->>C: 409 NO_AVAILABILITY {freeQualifiedTechnicians, freeBays}
+    else both available
+        S->>D: rankTechnicians (least loaded) · rankBays
+        S->>DB: INSERT appointment (exclusion constraints re-check)
+        S->>DB: COMMIT (lock released)
+        S-->>R: appointment
+        R-->>C: 201 Created + Location
+    end
+
+    Note over S,DB: On 23P01 (overlap) or 40P01 (deadlock):<br/>re-read & retry, max 3 attempts, then 409

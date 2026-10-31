@@ -7,6 +7,10 @@ appointment only when both a **service bay** and a **qualified technician** are 
 **Implemented layer:** Backend (REST API + PostgreSQL). The frontend is stubbed by the OpenAPI
 spec (`docs/openapi.json`, Swagger UI at `/docs`) and cURL examples (`docs/api-examples.md`).
 
+**Full diagram set:** [`ARCHITECTURE_DIAGRAMS.md`](ARCHITECTURE_DIAGRAMS.md) covers system context, deployment,
+components, data model, booking sequence, the concurrency race and the appointment lifecycle. Mermaid sources are
+in `docs/diagrams/*.mmd`, with PNG exports alongside them.
+
 ---
 
 ## 1. Requirements and assumptions
@@ -84,17 +88,69 @@ erDiagram
     DEALERSHIP ||--o{ TECHNICIAN : employs
     DEALERSHIP ||--o{ SERVICE_BAY : has
     CUSTOMER ||--o{ VEHICLE : owns
-    APPOINTMENT }o--|| DEALERSHIP : at
-    APPOINTMENT }o--|| CUSTOMER : for
-    APPOINTMENT }o--|| VEHICLE : services
-    APPOINTMENT }o--|| SERVICE_TYPE : of
-    APPOINTMENT }o--|| TECHNICIAN : "assigned to"
-    APPOINTMENT }o--|| SERVICE_BAY : "uses"
-    DEALERSHIP { uuid id text timezone time opens_at time closes_at }
-    SERVICE_TYPE { uuid id text code int duration_minutes text required_skill }
-    TECHNICIAN { uuid id text_array skills bool active }
-    SERVICE_BAY { uuid id text name bool active }
-    APPOINTMENT { uuid id timestamptz start_time timestamptz end_time enum status text idempotency_key }
+    DEALERSHIP ||--o{ APPOINTMENT : hosts
+    CUSTOMER ||--o{ APPOINTMENT : books
+    VEHICLE ||--o{ APPOINTMENT : "is serviced in"
+    SERVICE_TYPE ||--o{ APPOINTMENT : "defines duration of"
+    TECHNICIAN ||--o{ APPOINTMENT : "is assigned"
+    SERVICE_BAY ||--o{ APPOINTMENT : "is occupied by"
+
+    DEALERSHIP {
+        uuid id PK
+        text name
+        text timezone "IANA, e.g. Europe/London"
+        time opens_at "local time"
+        time closes_at "local time"
+    }
+    SERVICE_TYPE {
+        uuid id PK
+        text code UK
+        text name
+        int duration_minutes
+        text required_skill "e.g. BRAKES"
+    }
+    TECHNICIAN {
+        uuid id PK
+        uuid dealership_id FK
+        text name
+        text_array skills
+        bool active
+    }
+    SERVICE_BAY {
+        uuid id PK
+        uuid dealership_id FK
+        text name
+        bool active
+    }
+    CUSTOMER {
+        uuid id PK
+        text name
+        text email UK
+        text phone
+    }
+    VEHICLE {
+        uuid id PK
+        uuid customer_id FK
+        char17 vin UK
+        text make
+        text model
+        int year
+    }
+    APPOINTMENT {
+        uuid id PK
+        uuid dealership_id FK
+        uuid customer_id FK
+        uuid vehicle_id FK
+        uuid service_type_id FK
+        uuid technician_id FK "EXCLUDE overlap"
+        uuid service_bay_id FK "EXCLUDE overlap"
+        timestamptz start_time
+        timestamptz end_time
+        enum status "CONFIRMED or CANCELLED"
+        text idempotency_key UK
+        timestamptz created_at
+        timestamptz cancelled_at
+    }
 ```
 
 ---

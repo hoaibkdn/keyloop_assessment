@@ -1,0 +1,17 @@
+stateDiagram-v2
+    direction LR
+    [*] --> Requested: POST /appointments
+    Requested --> Rejected: 400 / 404 / 422<br/>invalid or rule broken
+    Requested --> Unavailable: 409<br/>no tech + bay pair free
+    Requested --> CONFIRMED: 201<br/>tech + bay assigned
+    CONFIRMED --> CANCELLED: POST /appointments/{id}/cancel<br/>resources released
+    CANCELLED --> CANCELLED: cancel again → 409 INVALID_STATE
+    Rejected --> [*]
+    Unavailable --> [*]
+    CANCELLED --> [*]
+    CONFIRMED --> [*]: service completed<br/>(out of scope)
+
+    note right of CONFIRMED
+        Only CONFIRMED rows take part
+        in the overlap constraints
+    end note

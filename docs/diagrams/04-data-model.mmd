@@ -1,0 +1,67 @@
+erDiagram
+    DEALERSHIP ||--o{ TECHNICIAN : employs
+    DEALERSHIP ||--o{ SERVICE_BAY : has
+    CUSTOMER ||--o{ VEHICLE : owns
+    DEALERSHIP ||--o{ APPOINTMENT : hosts
+    CUSTOMER ||--o{ APPOINTMENT : books
+    VEHICLE ||--o{ APPOINTMENT : "is serviced in"
+    SERVICE_TYPE ||--o{ APPOINTMENT : "defines duration of"
+    TECHNICIAN ||--o{ APPOINTMENT : "is assigned"
+    SERVICE_BAY ||--o{ APPOINTMENT : "is occupied by"
+
+    DEALERSHIP {
+        uuid id PK
+        text name
+        text timezone "IANA, e.g. Europe/London"
+        time opens_at "local time"
+        time closes_at "local time"
+    }
+    SERVICE_TYPE {
+        uuid id PK
+        text code UK
+        text name
+        int duration_minutes
+        text required_skill "e.g. BRAKES"
+    }
+    TECHNICIAN {
+        uuid id PK
+        uuid dealership_id FK
+        text name
+        text_array skills
+        bool active
+    }
+    SERVICE_BAY {
+        uuid id PK
+        uuid dealership_id FK
+        text name
+        bool active
+    }
+    CUSTOMER {
+        uuid id PK
+        text name
+        text email UK
+        text phone
+    }
+    VEHICLE {
+        uuid id PK
+        uuid customer_id FK
+        char17 vin UK
+        text make
+        text model
+        int year
+    }
+    APPOINTMENT {
+        uuid id PK
+        uuid dealership_id FK
+        uuid customer_id FK
+        uuid vehicle_id FK
+        uuid service_type_id FK
+        uuid technician_id FK "EXCLUDE overlap"
+        uuid service_bay_id FK "EXCLUDE overlap"
+        timestamptz start_time
+        timestamptz end_time
+        enum status "CONFIRMED or CANCELLED"
+        text idempotency_key UK
+        timestamptz created_at
+        timestamptz cancelled_at
+    }

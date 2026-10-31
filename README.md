@@ -6,6 +6,7 @@ linking customer, vehicle, technician and bay.
 
 - **Stack:** Node.js 22 · TypeScript · Fastify 5 · PostgreSQL 16 · Vitest
 - **Design document:** [`docs/SYSTEM_DESIGN.md`](docs/SYSTEM_DESIGN.md) (architecture, data flow, technology choices, observability, assumptions)
+- **Diagrams:** [`docs/ARCHITECTURE_DIAGRAMS.md`](docs/ARCHITECTURE_DIAGRAMS.md) (7 Mermaid diagrams, with PNG exports in `docs/diagrams/`)
 - **API contract:** [`docs/openapi.json`](docs/openapi.json) · Swagger UI at `/docs` · [cURL examples](docs/api-examples.md)
 
 ## Highlights

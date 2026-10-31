@@ -1,0 +1,32 @@
+flowchart TB
+    client["Clients<br/>web UI · dealer portal · partner systems"]
+    gw["API Gateway / Load Balancer<br/>TLS · AuthN · rate limiting"]
+
+    subgraph cluster["Container platform (e.g. Kubernetes) · stateless, horizontally scaled"]
+        direction LR
+        api1["scheduler-api<br/>replica 1"]
+        api2["scheduler-api<br/>replica 2"]
+        apiN["scheduler-api<br/>replica N"]
+    end
+
+    subgraph data["Data tier"]
+        direction LR
+        pg[("PostgreSQL primary<br/>writes · advisory locks ·<br/>exclusion constraints")]
+        replica[("Read replica<br/><i>future: availability reads</i>")]
+        pg -.->|"streaming replication"| replica
+    end
+
+    subgraph obs["Observability"]
+        direction LR
+        prom["Prometheus"] --> graf["Grafana<br/>dashboards & alerts"]
+        logs["Log aggregator<br/>Loki / ELK / CloudWatch"]
+    end
+
+    client -->|HTTPS| gw
+    gw -->|"HTTP · probes /health/ready"| cluster
+    cluster -->|"pg pool, max 10 conns / replica"| pg
+    prom -.->|"scrape /metrics"| cluster
+    cluster -.->|"JSON logs via stdout"| logs
+
+    classDef future stroke-dasharray: 5 5,fill:#f6f6f6,color:#555
+    class replica future
